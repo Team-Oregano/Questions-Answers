@@ -16,13 +16,4 @@ pool
   .then(() => console.log(`PGsql connected on port ${process.env.PG_PORT} *****`))
   .catch((err) => console.log(err));
 
-// pool.query('Select * from answers_photos', (err, res) => {
-//   if (err) {
-//     console.log(err);
-//   } else {
-//     console.log(res.rows)
-//   }
-//   pool.end;
-// })
-
 module.exports = pool;
