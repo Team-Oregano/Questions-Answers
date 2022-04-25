@@ -42,8 +42,8 @@ const getQuestions = async (req, res) => {
   //   }
   // }
   )
-    .then((data) => res.send(data.rows[0].row_to_json) || [])
-    .catch((err) => res.send(err));
+    .then((data) => res.status(200).send(data.rows[0].row_to_json) || [])
+    .catch((err) => res.status(400).send(err));
 };
 
 const getAnswers = async (req, res) => {
@@ -83,7 +83,7 @@ SELECT json_build_object(
       if (err) {
         res.send(err);
       } else {
-        res.send(results.rows[0].json_build_object);
+        res.status(200).send(results.rows[0].json_build_object);
       }
     },
   );
@@ -93,9 +93,9 @@ const markQuestionHelpful = async (req, res) => {
   const { question_id } = req.params;
   await pool.query('UPDATE questions SET helpful = helpful + 1 WHERE id = $1', [question_id], (err, results) => {
     if (err) {
-      console.log(err);
+      res.status(400).send('Error on marking answer helpful');
     } else {
-      res.send('Updated question helpfulness');
+      res.status(200).send('Updated question helpfulness');
     }
   });
 };
@@ -104,9 +104,9 @@ const markAnswerHelpful = async (req, res) => {
   const { answer_id } = req.params;
   await pool.query('UPDATE answers SET helpful = helpful + 1 WHERE id = $1', [answer_id], (err, results) => {
     if (err) {
-      console.log(err);
+      res.status(400).send('Error on marking answer helpful');
     } else {
-      res.send('Updated answer helpfulness');
+      res.status(200).send('Updated answer helpfulness');
     }
   });
 };
@@ -115,9 +115,9 @@ const reportQuestion = async (req, res) => {
   const { question_id } = req.params;
   await pool.query('UPDATE questions SET reported = true WHERE id = $1', [question_id], (err, results) => {
     if (err) {
-      console.log(err);
+      res.status(400).send('Error on reporting question');
     } else {
-      res.send('Question reported');
+      res.status(200).send('Question reported');
     }
   });
 };
@@ -126,9 +126,9 @@ const reportAnswer = async (req, res) => {
   const { answer_id } = req.params;
   await pool.query('UPDATE answers SET reported = true WHERE id = $1', [answer_id], (err, results) => {
     if (err) {
-      console.log(err);
+      res.status(400).send('Error on reporting answer');
     } else {
-      res.send('Answer reported');
+      res.status(200).send('Answer reported');
     }
   });
 };
@@ -149,9 +149,9 @@ const addQuestion = async (req, res) => {
     values,
     (err, results) => {
       if (err) {
-        console.log(err);
+        res.status(400).send('Error on posting question');
       } else {
-        res.send('Question added');
+        res.status(201).send('Question added');
       }
     },
   );
