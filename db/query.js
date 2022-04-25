@@ -1,18 +1,20 @@
 const pool = require('./db.js');
 
 const getQuestions = async (req, res) => {
-  const { product_id, page, count } = req.query;
+  let { product_id, page, count } = req.query;
+
+  count = count || 5;
   await pool.query(`SELECT row_to_json(quest)
   from(
     select product_id,
     (
-      select json_agg(json_build_object('question_id', questions.id, 'question_body', body, 'question_date', date_written, 'asker_name', asker_name, 'question_helpfulness', helpful, 'reported', reported, 'answers',
+      select json_agg(json_build_object('question_id', questions.id, 'question_body', body, 'question_date', to_timestamp(date_written/1000), 'asker_name', asker_name, 'question_helpfulness', helpful, 'reported', reported, 'answers',
       (
         select json_object_agg(
           id, json_build_object(
             'id', id,
             'body', body,
-            'date', data_written,
+            'date', to_timestamp(data_written/1000),
             'answerer_name', answerer_name,
             'helpfulness', helpful,
             'photos',
@@ -29,13 +31,19 @@ const getQuestions = async (req, res) => {
     where product_id = $1  AND reported = false
     ) as results
     from questions where product_id = $1
-  ) quest `, [product_id], (err, results) => {
-    if (err) {
-      console.log(err);
-    } else {
-      res.send(results.rows);
-    }
-  });
+  ) quest
+
+  `, [product_id],
+  // , (err, results) => {
+  //   if (err) {
+  //     console.log(err);
+  //   } else {
+  //     res.send(results.rows);
+  //   }
+  // }
+  )
+    .then((data) => res.send(data.rows[0].row_to_json) || [])
+    .catch((err) => res.send(err));
 };
 
 const getAnswers = async (req, res) => {
@@ -44,15 +52,15 @@ const getAnswers = async (req, res) => {
     `
 SELECT json_build_object(
     'question', id,
-    'page', ${page},
-    'count', ${count},
+    'page', ${page || 1},
+    'count', ${count || 5},
     'results',
     (
       select json_agg(
         json_build_object(
           'answer_id', id,
           'body', body,
-          'date', data_written,
+          'date', to_timestamp(data_written/1000),
           'answerer_name', answerer_name,
           'helpfulness', helpful,
           'photos',
@@ -69,13 +77,13 @@ SELECT json_build_object(
     from answers
     where question_id = questions.id
     )
-  ) from questions where id = $1 `,
+  ) from questions where id = $1`,
     [question_id],
     (err, results) => {
       if (err) {
         res.send(err);
       } else {
-        res.send(results.rows);
+        res.send(results.rows[0].json_build_object);
       }
     },
   );
@@ -128,7 +136,7 @@ const reportAnswer = async (req, res) => {
 const addPhotos = async (answer_id, newAnswer) => {
   await newAnswer.photos.forEach((photo) => {
     [answer_id].push(photo);
-    return pool.query('INSERT INTO answers_photos (answer_id, url) VALUES($1, $2)', [answer_id]);
+    return pool.query('INSERT INTO answers_photos (answer_id, url) VALUES($1, $2)', [answer_id, photo]);
   });
 };
 
@@ -165,8 +173,9 @@ const addAnswer = async (req, res) => {
     //   }
     // },
   ).then((data) => {
+    // console.log(data.rows[0].id);
     if (req.body.photos.length > 0) {
-      const answer_id = Number(data.rows[0].id);
+      const answer_id = data.rows[0].id;
       addPhotos(answer_id, req.body)
         .then(() => {
           res.status(201).send('Photo Added');
@@ -178,7 +187,8 @@ const addAnswer = async (req, res) => {
       res.status(200).send('Answer added');
     }
   }).catch((err) => {
-    res.status(400).send('err posting answer');
+    console.log(err);
+    res.status(400).send('err posting answer: ');
   });
 };
 
