@@ -4,6 +4,7 @@ const express = require('express');
 const db = require('../db/query.js');
 
 const app = express();
+app.use(express.static(__dirname + '/public'));
 app.use(express.json());
 
 app.get('/qa/questions', db.getQuestions);
